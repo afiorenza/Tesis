@@ -1,0 +1,10 @@
+WITH {lumenes:[],grados:[],decibelios:[],tipoPuesto: []} as Parametros
+MATCH p = (S:Nodo:Alternativa{nivel:0,indice:0})-[:Decision*]->(T:Nodo:Terminal)
+WHERE ALL(r in relationships(p) WHERE
+  (r.tipo = 'mayor' AND Parametros[r.propiedad] > r.valor) OR
+  (r.tipo = 'menor' AND Parametros[r.propiedad] <= r.valor) OR
+  (r.tipo = 'derecha' AND Parametros[r.propiedad] = 'delicado') OR
+  (r.tipo = 'izquierda' AND Parametros[r.propiedad] <> 'delicado') OR
+  (r.obligatorio = true)
+)
+RETURN T.resultado
