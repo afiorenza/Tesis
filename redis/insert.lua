@@ -24,20 +24,17 @@ redis.call('HSET', nextKey, parametros[2], grados)
 redis.call('HSET', nextKey, parametros[3], lumenes)
 redis.call('HSET', nextKey, 'tipoPuesto', tipoPuesto)
 
--- Chequea si existe registro n-2 y n-1
-if (redis.call('EXISTS', puestoYArea..':'..nextIndex - 2) ~= 0 and redis.call('EXISTS', puestoYArea..':'..nextIndex - 1) ~= 0) then
-  -- Chequea variables
-  for index = 1, 3 do
-    local indexMinusTwo = redis.call('HGET', puestoYArea..':'..nextIndex - 2, parametros[index])
-    local indexMinusOne = redis.call('HGET', puestoYArea..':'..nextIndex - 1, parametros[index])
-    local currentIndex = redis.call('HGET', puestoYArea..':'..nextIndex, parametros[index])
+redis.call('PUBLISH', 'tesis', 'Tupla agregada. Area: '..area.. ' puesto: '..puesto..'. Temperatura: '..grados..' grados. Sonido: '..decibelios..' decibelios. Iluminacion: '..lumenes..' lumenes.')
 
-    if not (indexMinusTwo == indexMinusOne or indexMinusOne == currentIndex) then
-      if not (indexMinusOne > indexMinusTwo and indexMinusOne < currentIndex) then
-        print('anomalo '..parametros[index])
-      end
+for index = 1, 3 do
+  local indexMinusTwo = redis.call('HGET', puestoYArea..':'..nextIndex - 2, parametros[index])
+  local indexMinusOne = redis.call('HGET', puestoYArea..':'..nextIndex - 1, parametros[index])
+  local currentIndex = redis.call('HGET', puestoYArea..':'..nextIndex, parametros[index])
+
+  if (indexMinusTwo ~= false and indexMinusOne ~= false and (indexMinusTwo ~= indexMinusOne or indexMinusOne ~= currentIndex)) then
+    if not (indexMinusOne > indexMinusTwo and indexMinusOne < currentIndex) then
+      redis.call('HDEL', nextKey, parametros[index])
+      redis.call('PUBLISH', 'tesis', 'Valor anomalo '..parametros[index]..' en Area: '..area.. ' puesto: '..puesto..' Secuencial '..indexMinusOne..'.')
     end
   end
 end
-
--- return redis.call('HGETALL', nextKey)
