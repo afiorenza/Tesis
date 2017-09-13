@@ -25,9 +25,8 @@ for indice = 3, 6 do
       redis.call('PUBLISH', 'error', 'Valor anomalo '..parametros[indice]..' en '..proximaKey..'.')
     else
       if (
-        valorIndiceMenosDos ~= false and valorIndiceMenosUno ~= false
-        and (valorIndiceMenosDos ~= valorIndiceMenosUno or valorIndiceMenosUno ~= valorActual)
-        and not (valorIndiceMenosUno > valorIndiceMenosDos and valorIndiceMenosUno < valorActual)
+        valorIndiceMenosDos ~= false and valorIndiceMenosUno ~= false and valorActual ~= false and
+        not (valorIndiceMenosUno >= valorIndiceMenosDos and valorIndiceMenosUno <= valorActual)
       ) then
         local indiceMenosUno = proximoIndice - 1
         redis.call('HDEL', areaYPuesto..':'..indiceMenosUno, parametros[indice])
