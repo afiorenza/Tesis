@@ -10,33 +10,33 @@ local function publish (channel, text)
   redis.call('PUBLISH', channel, text)
 end
 
--- Inicializa variables desde parametros
-local area = KEYS[1]
-local puesto = KEYS[2]
-local lumenes = KEYS[3]
-local grados = KEYS[4]
-local decibelios = KEYS[5]
-local tipoPuesto = KEYS[6]
-
-local areaYPuesto = area..':'..puesto
+local areaYPuesto = KEYS[1]..':'..KEYS[2]
 
 initializeAreaYPuesto(areaYPuesto)
 
 local nextIndex = redis.call('INCR', areaYPuesto)
 local nextKey = areaYPuesto..':'..nextIndex
 
-redis.call('HSET', nextKey, 'tipoPuesto', tipoPuesto)
+redis.call('HSET', nextKey, 'tipoPuesto', KEYS[6])
 
 for index = 1, 3 do
-  local indexMinusTwo = redis.call('HGET', areaYPuesto..':'..nextIndex - 2, parametrosAmbientales[index])
-  local indexMinusOne = redis.call('HGET', areaYPuesto..':'..nextIndex - 1, parametrosAmbientales[index])
+  local valueOfIndexMinusTwo = redis.call('HGET', areaYPuesto..':'..nextIndex - 2, parametrosAmbientales[index])
+  local valueOfIndexMinusOne = redis.call('HGET', areaYPuesto..':'..nextIndex - 1, parametrosAmbientales[index])
   local currentValue = KEYS[index + 2]
 
   if (type(tonumber(currentValue)) ~= 'number') then
     publish('error', 'Valor anomalo '..parametrosAmbientales[index]..' en '..nextKey..'.')
-  elseif (indexMinusTwo ~= false and indexMinusOne ~= false and (indexMinusTwo ~= indexMinusOne or indexMinusOne ~= currentValue) and not (indexMinusOne > indexMinusTwo and indexMinusOne < currentValue)) then
-    publish('error', 'Valor anomalo '..parametrosAmbientales[index]..' en Area: '..area.. ' puesto: '..puesto..' Secuencial '..indexMinusOne..'.')
   else
+    if (
+      valueOfIndexMinusTwo ~= false and valueOfIndexMinusOne ~= false
+      and (valueOfIndexMinusTwo ~= valueOfIndexMinusOne or valueOfIndexMinusOne ~= currentValue)
+      and not (valueOfIndexMinusOne > valueOfIndexMinusTwo and valueOfIndexMinusOne < currentValue)
+    ) then
+      local indexMinusOne = nextIndex - 1
+      redis.call('HDEL', areaYPuesto..':'..indexMinusOne, parametrosAmbientales[index])
+      publish('error', 'Valor fuera de rango '..parametrosAmbientales[index]..' en '..areaYPuesto..':'..indexMinusOne..'.')
+    end
+
     redis.call('HSET', nextKey, parametrosAmbientales[index], currentValue)
     publish('tesis', KEYS[index + 2]..' '..parametrosAmbientales[index]..' agregado en '..nextKey..'.')
   end
