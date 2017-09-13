@@ -1,40 +1,43 @@
+local parametrosAmbientales = {'lumenes', 'grados', 'decibelios'}
+
+local function initializeAreaYPuesto (areaYPuesto)
+  if (redis.call('GET', areaYPuesto) == nil) then
+    redis.call('SET', areaYPuesto, 0)
+  end
+end
+
+local function publish (channel, text)
+  redis.call('PUBLISH', channel, text)
+end
+
 -- Inicializa variables desde parametros
-local puesto = KEYS[1]
-local area = KEYS[2]
+local area = KEYS[1]
+local puesto = KEYS[2]
 local lumenes = KEYS[3]
 local grados = KEYS[4]
 local decibelios = KEYS[5]
 local tipoPuesto = KEYS[6]
 
-local parametros = {'decibelios', 'grados', 'lumenes'}
-local puestoYArea = puesto..':'..area
+local areaYPuesto = area..':'..puesto
 
--- Busca valor contador y si no existe lo agrega
-if (redis.call('GET', puestoYArea) == nil) then
-  redis.call('SET', puestoYArea, 0)
-end
+initializeAreaYPuesto(areaYPuesto)
 
--- Incrementa contador
-local nextIndex = redis.call('INCR', puestoYArea)
-local nextKey = puestoYArea..':'..nextIndex
+local nextIndex = redis.call('INCR', areaYPuesto)
+local nextKey = areaYPuesto..':'..nextIndex
 
--- Agrega registros
-redis.call('HSET', nextKey, parametros[1], decibelios)
-redis.call('HSET', nextKey, parametros[2], grados)
-redis.call('HSET', nextKey, parametros[3], lumenes)
 redis.call('HSET', nextKey, 'tipoPuesto', tipoPuesto)
 
-redis.call('PUBLISH', 'tesis', 'Tupla agregada. Area: '..area.. ' puesto: '..puesto..'. Temperatura: '..grados..' grados. Sonido: '..decibelios..' decibelios. Iluminacion: '..lumenes..' lumenes.')
-
 for index = 1, 3 do
-  local indexMinusTwo = redis.call('HGET', puestoYArea..':'..nextIndex - 2, parametros[index])
-  local indexMinusOne = redis.call('HGET', puestoYArea..':'..nextIndex - 1, parametros[index])
-  local currentIndex = redis.call('HGET', puestoYArea..':'..nextIndex, parametros[index])
+  local indexMinusTwo = redis.call('HGET', areaYPuesto..':'..nextIndex - 2, parametrosAmbientales[index])
+  local indexMinusOne = redis.call('HGET', areaYPuesto..':'..nextIndex - 1, parametrosAmbientales[index])
+  local currentValue = KEYS[index + 2]
 
-  if (indexMinusTwo ~= false and indexMinusOne ~= false and (indexMinusTwo ~= indexMinusOne or indexMinusOne ~= currentIndex)) then
-    if not (indexMinusOne > indexMinusTwo and indexMinusOne < currentIndex) then
-      redis.call('HDEL', nextKey, parametros[index])
-      redis.call('PUBLISH', 'tesis', 'Valor anomalo '..parametros[index]..' en Area: '..area.. ' puesto: '..puesto..' Secuencial '..indexMinusOne..'.')
-    end
+  if (type(tonumber(currentValue)) ~= 'number') then
+    publish('error', 'Valor anomalo '..parametrosAmbientales[index]..' en '..nextKey..'.')
+  elseif (indexMinusTwo ~= false and indexMinusOne ~= false and (indexMinusTwo ~= indexMinusOne or indexMinusOne ~= currentValue) and not (indexMinusOne > indexMinusTwo and indexMinusOne < currentValue)) then
+    publish('error', 'Valor anomalo '..parametrosAmbientales[index]..' en Area: '..area.. ' puesto: '..puesto..' Secuencial '..indexMinusOne..'.')
+  else
+    redis.call('HSET', nextKey, parametrosAmbientales[index], currentValue)
+    publish('tesis', KEYS[index + 2]..' '..parametrosAmbientales[index]..' agregado en '..nextKey..'.')
   end
 end
