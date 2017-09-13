@@ -7,36 +7,35 @@ local function nuevoNroSecuencial (areaYPuesto)
   return redis.call('INCR', areaYPuesto)
 end
 
-local function addAndPublish (key, field, value)
-  redis.call('HSET', key, field, value)
-  redis.call('PUBLISH', 'insert', field..': '..value..' agregado en '..key..'.')
+local function agregarCampo (clave, campo, valor)
+  redis.call('HSET', clave, campo, valor)
 end
 
 local areaYPuesto = KEYS[1]..':'..KEYS[2]
-local nextIndex = nuevoNroSecuencial(areaYPuesto)
-local nextKey = areaYPuesto..':'..nextIndex
+local proximoIndice = nuevoNroSecuencial(areaYPuesto)
+local proximaKey = areaYPuesto..':'..proximoIndice
 
-for index = 3, 6 do
-  local valueOfIndexMinusTwo = redis.call('HGET', areaYPuesto..':'..nextIndex - 2, parametros[index])
-  local valueOfIndexMinusOne = redis.call('HGET', areaYPuesto..':'..nextIndex - 1, parametros[index])
-  local currentValue = KEYS[index]
+for indice = 3, 6 do
+  local valorIndiceMenosDos = redis.call('HGET', areaYPuesto..':'..proximoIndice - 2, parametros[indice])
+  local valorIndiceMenosUno = redis.call('HGET', areaYPuesto..':'..proximoIndice - 1, parametros[indice])
+  local valorActual = KEYS[indice]
 
-  if (index ~= 6) then
-    if (type(tonumber(currentValue)) ~= 'number') then
-      redis.call('PUBLISH', 'error', 'Valor anomalo '..parametros[index]..' en '..nextKey..'.')
+  if (indice ~= 6) then
+    if (type(tonumber(valorActual)) ~= 'number') then
+      redis.call('PUBLISH', 'error', 'Valor anomalo '..parametros[indice]..' en '..proximaKey..'.')
     else
       if (
-        valueOfIndexMinusTwo ~= false and valueOfIndexMinusOne ~= false
-        and (valueOfIndexMinusTwo ~= valueOfIndexMinusOne or valueOfIndexMinusOne ~= currentValue)
-        and not (valueOfIndexMinusOne > valueOfIndexMinusTwo and valueOfIndexMinusOne < currentValue)
+        valorIndiceMenosDos ~= false and valorIndiceMenosUno ~= false
+        and (valorIndiceMenosDos ~= valorIndiceMenosUno or valorIndiceMenosUno ~= valorActual)
+        and not (valorIndiceMenosUno > valorIndiceMenosDos and valorIndiceMenosUno < valorActual)
       ) then
-        local indexMinusOne = nextIndex - 1
-        redis.call('HDEL', areaYPuesto..':'..indexMinusOne, parametros[index])
-        redis.call('PUBLISH', 'error', 'Valor fuera de rango '..parametros[index]..' en '..areaYPuesto..':'..indexMinusOne..'.')
+        local indiceMenosUno = proximoIndice - 1
+        redis.call('HDEL', areaYPuesto..':'..indiceMenosUno, parametros[indice])
+        redis.call('PUBLISH', 'error', 'Valor fuera de rango '..parametros[indice]..' en '..areaYPuesto..':'..indiceMenosUno..'.')
       end
-      addAndPublish(nextKey, parametros[index], currentValue)
+      agregarCampo(proximaKey, parametros[indice], valorActual)
     end
   else
-    addAndPublish(nextKey, parametros[index], currentValue)
+    agregarCampo(proximaKey, parametros[indice], valorActual)
   end
 end
