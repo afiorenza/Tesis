@@ -26,7 +26,8 @@ for indice = 3, 6 do
     else
       if (
         valorIndiceMenosDos ~= false and valorIndiceMenosUno ~= false and valorActual ~= false and
-        not (valorIndiceMenosUno >= valorIndiceMenosDos and valorIndiceMenosUno <= valorActual)
+        not (tonumber(valorIndiceMenosUno) >= math.min(valorIndiceMenosDos, valorActual) and
+         tonumber(valorIndiceMenosUno) <= math.max(valorIndiceMenosDos, valorActual))
       ) then
         local indiceMenosUno = proximoIndice - 1
         redis.call('HDEL', areaYPuesto..':'..indiceMenosUno, parametros[indice])
