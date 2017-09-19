@@ -22,6 +22,8 @@ for indice = 3, 6 do
 
   if (indice ~= 6) then
     if (type(tonumber(valorActual)) ~= 'number') then
+      local indiceMenosUno = proximoIndice - 1
+      redis.call('HSET', proximaKey..':anomalo', parametros[indice], valorActual)
       redis.call('PUBLISH', 'error', 'Valor anomalo '..parametros[indice]..' en '..proximaKey..'.')
     else
       if (
@@ -31,6 +33,7 @@ for indice = 3, 6 do
       ) then
         local indiceMenosUno = proximoIndice - 1
         redis.call('HDEL', areaYPuesto..':'..indiceMenosUno, parametros[indice])
+        redis.call('HSET', areaYPuesto..':'..indiceMenosUno..':anomalo', parametros[indice], valorIndiceMenosUno)
         redis.call('PUBLISH', 'error', 'Valor fuera de rango '..parametros[indice]..' en '..areaYPuesto..':'..indiceMenosUno..'.')
       end
       agregarCampo(proximaKey, parametros[indice], valorActual)
