@@ -22,7 +22,6 @@ for indice = 3, 6 do
 
   if (indice ~= 6) then
     if (type(tonumber(valorActual)) ~= 'number') then
-      local indiceMenosUno = proximoIndice - 1
       redis.call('HSET', proximaKey..':anomalo', parametros[indice], valorActual)
       redis.call('PUBLISH', 'error', 'Valor anomalo '..parametros[indice]..' en '..proximaKey..'.')
     else
